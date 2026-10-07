@@ -359,7 +359,7 @@ class RecordRepository {
       for (final item in draft.items) ...[item.name, item.partNumber],
       for (final a in draft.attachments) a.caption,
       // Several date formats so that "2026-03", "03.2026" or "March" match.
-      DateFormat('yyyy-MM-dd dd.MM.yyyy MMMM yyyy').format(draft.date),
+      DateFormat('yyyy-MM-dd dd.MM.yyyy MMMM yyyy', 'en_US').format(draft.date),
     ].whereType<String>().join(' ');
 
     await _db.customStatement('DELETE FROM record_search WHERE rowid = ?', [
