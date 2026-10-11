@@ -10,6 +10,7 @@ import '../../widgets/placeholder_view.dart';
 import '../../widgets/vehicle_avatar.dart';
 import '../garage/odometer_dialog.dart';
 import '../garage/vehicle_text.dart';
+import '../history/record_tile.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -56,6 +57,8 @@ class DashboardScreen extends ConsumerWidget {
                   _VehicleCard(vehicle: vehicle),
                   const SizedBox(height: 16),
                   const _QuickActions(),
+                  const SizedBox(height: 24),
+                  _RecentRecords(vehicleId: vehicle.id),
                 ],
               ),
       ),
@@ -196,6 +199,43 @@ class _QuickActions extends StatelessWidget {
             icon: const Icon(Icons.build),
             label: const Text('Log service'),
             onPressed: () => context.push('${Routes.newRecord}?type=service'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecentRecords extends ConsumerWidget {
+  const _RecentRecords({required this.vehicleId});
+
+  final int vehicleId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final records = ref.watch(recentRecordsProvider(vehicleId)).value ?? [];
+    if (records.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Recent records',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.go(Routes.history),
+              child: const Text('See all'),
+            ),
+          ],
+        ),
+        Card.outlined(
+          child: Column(
+            children: [for (final r in records) RecordTile(record: r)],
           ),
         ),
       ],

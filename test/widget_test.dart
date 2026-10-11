@@ -53,7 +53,7 @@ void main() {
 
     await tester.tap(find.text('History'));
     await tester.pumpAndSettle();
-    expect(find.text('Service history'), findsOneWidget);
+    expect(find.text('No vehicle'), findsOneWidget);
 
     await tester.tap(find.text('Plan'));
     await tester.pumpAndSettle();

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/db/database.dart';
 import 'data/repositories/attachment_repository.dart';
+import 'data/repositories/record_models.dart';
 import 'data/repositories/record_repository.dart';
 import 'data/repositories/reminder_repository.dart';
 import 'data/repositories/task_repository.dart';
@@ -107,3 +108,21 @@ final currentVehicleProvider = Provider<AsyncValue<Vehicle?>>((ref) {
               ),
       );
 });
+
+// ---------------------------------------------------------------------------
+// Records and tasks
+
+/// A record with fuel data, items, photos and completed tasks.
+final recordDetailsProvider = StreamProvider.family<RecordDetails?, int>(
+  (ref, id) => ref.watch(recordRepositoryProvider).watchDetails(id),
+);
+
+/// The latest records of a vehicle, for the dashboard.
+final recentRecordsProvider = StreamProvider.family<List<ServiceRecord>, int>(
+  (ref, vehicleId) =>
+      ref.watch(recordRepositoryProvider).watchRecords(vehicleId, limit: 3),
+);
+
+final activeTasksProvider = StreamProvider.family<List<MaintenanceTask>, int>(
+  (ref, vehicleId) => ref.watch(taskRepositoryProvider).watchActive(vehicleId),
+);
