@@ -1,8 +1,12 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show debugPrint;
+
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
+
+import 'image_compressor.dart';
 
 /// Stores receipt and document photos in `<app documents>/receipts/`.
 ///
@@ -37,9 +41,28 @@ class FileStorage {
     return name;
   }
 
+  /// Compresses a photo (camera, gallery) into storage in a background
+  /// isolate and returns the new file name. Files that cannot be decoded
+  /// (e.g. HEIC) are copied as is.
+  Future<String> importImage(String sourcePath) async {
+    final name = newFileName('.jpg');
+    final ok = await ImageCompressor.compressFile(sourcePath, pathOf(name));
+    return ok ? name : importFile(sourcePath);
+  }
+
+  /// Best-effort cleanup: a file that cannot be deleted (e.g. locked by
+  /// another process on Windows) is logged and left behind instead of
+  /// failing the operation that triggered the cleanup.
+  ///
+  /// Deleting takes microseconds, so it is done synchronously: simpler,
+  /// and it completes even while a screen is being disposed.
   Future<void> delete(String fileName) async {
     final file = fileOf(fileName);
-    if (await file.exists()) await file.delete();
+    try {
+      if (file.existsSync()) file.deleteSync();
+    } on FileSystemException catch (e) {
+      debugPrint('Could not delete $fileName: $e');
+    }
   }
 
   Future<void> deleteAll(Iterable<String> fileNames) async {

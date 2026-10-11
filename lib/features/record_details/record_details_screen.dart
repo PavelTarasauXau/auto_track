@@ -7,9 +7,11 @@ import '../../core/format.dart';
 import '../../core/router.dart';
 import '../../data/repositories/record_models.dart';
 import '../../providers.dart';
+import '../../widgets/attachment_thumb.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/placeholder_view.dart';
 import '../../widgets/record_type_icon.dart';
+import '../photo_viewer/photo_viewer_screen.dart';
 
 class RecordDetailsScreen extends ConsumerWidget {
   const RecordDetailsScreen({super.key, required this.recordId});
@@ -153,6 +155,11 @@ class _Details extends StatelessWidget {
                 ),
             ],
           ),
+        if (details.attachments.isNotEmpty)
+          _Section(
+            title: 'Receipts & photos',
+            children: [_Gallery(details: details)],
+          ),
         if (details.completedTasks.isNotEmpty)
           _Section(
             title: 'Completed maintenance',
@@ -234,6 +241,50 @@ class _InfoRow extends StatelessWidget {
       leading: Icon(icon),
       title: Text(label),
       trailing: Text(value, style: Theme.of(context).textTheme.bodyLarge),
+    );
+  }
+}
+
+/// Grid of attached photos; a tap opens the full-screen viewer.
+class _Gallery extends StatelessWidget {
+  const _Gallery({required this.details});
+
+  final RecordDetails details;
+
+  @override
+  Widget build(BuildContext context) {
+    final photos = [
+      for (final a in details.attachments)
+        ViewerPhoto(
+          fileName: a.fileName,
+          docType: a.docType,
+          caption: a.caption,
+        ),
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const spacing = 8.0;
+          const columns = 3;
+          final size =
+              (constraints.maxWidth - spacing * (columns - 1)) / columns;
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: [
+              for (final (i, a) in details.attachments.indexed)
+                AttachmentThumb(
+                  fileName: a.fileName,
+                  docType: a.docType,
+                  size: size,
+                  onTap: () =>
+                      openPhotoViewer(context, photos, initialIndex: i),
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

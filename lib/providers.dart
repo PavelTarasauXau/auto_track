@@ -9,6 +9,7 @@ import 'data/repositories/reminder_repository.dart';
 import 'data/repositories/task_repository.dart';
 import 'data/repositories/vehicle_repository.dart';
 import 'services/file_storage.dart';
+import 'services/photo_picker.dart';
 
 // ---------------------------------------------------------------------------
 // Infrastructure
@@ -29,6 +30,15 @@ final fileStorageProvider = Provider<FileStorage>(
 final sharedPreferencesProvider = Provider<SharedPreferences>(
   (ref) =>
       throw UnimplementedError('Override sharedPreferencesProvider in main()'),
+);
+
+/// Camera / gallery access. Replaced with a fake in widget tests.
+final photoPickerProvider = Provider((ref) => const PhotoPicker());
+
+/// Compresses a picked photo into storage and returns its file name.
+/// Replaced in widget tests, where background isolates cannot run.
+final photoImporterProvider = Provider<Future<String> Function(String path)>(
+  (ref) => ref.watch(fileStorageProvider).importImage,
 );
 
 // ---------------------------------------------------------------------------

@@ -8,8 +8,13 @@ import '../../core/format.dart';
 import '../../data/db/database.dart';
 import '../../data/repositories/record_models.dart';
 import '../../providers.dart';
+import '../../services/file_storage.dart';
+import '../../services/photo_picker.dart';
+import '../../widgets/attachment_thumb.dart';
 import '../../widgets/placeholder_view.dart';
+import '../photo_viewer/photo_viewer_screen.dart';
 import 'item_sheet.dart';
+import 'photo_sheet.dart';
 
 class RecordFormScreen extends ConsumerStatefulWidget {
   const RecordFormScreen({super.key, this.recordId, this.initialType});
@@ -44,8 +49,18 @@ class _RecordFormScreenState extends ConsumerState<RecordFormScreen> {
   /// (completed one-off tasks), so they are not in the active list.
   List<MaintenanceTask> _linkedTasks = [];
 
-  /// Kept as is; photos are edited in the next stage.
   List<AttachmentDraft> _attachments = [];
+
+  /// Photos imported while the form is open. They are deleted again if the
+  /// form is left without saving, so no orphan files stay on disk.
+  final Set<String> _sessionFiles = {};
+  bool _saved = false;
+
+  /// Photos still being compressed.
+  int _importing = 0;
+
+  // Read once: `ref` cannot be used in dispose().
+  late final FileStorage _storage;
 
   int? _vehicleId;
   bool _loading = true;
@@ -61,6 +76,7 @@ class _RecordFormScreenState extends ConsumerState<RecordFormScreen> {
   @override
   void initState() {
     super.initState();
+    _storage = ref.read(fileStorageProvider);
     _liters.addListener(_recalculateFuelCost);
     _price.addListener(_recalculateFuelCost);
     _load();
@@ -133,6 +149,7 @@ class _RecordFormScreenState extends ConsumerState<RecordFormScreen> {
     ]) {
       c.dispose();
     }
+    if (!_saved) _storage.deleteAll(_sessionFiles);
     super.dispose();
   }
 
@@ -169,6 +186,58 @@ class _RecordFormScreenState extends ConsumerState<RecordFormScreen> {
       }
     });
   }
+
+  Future<void> _addPhotos() async {
+    final source = await askPhotoSource(context);
+    if (source == null) return;
+    final paths = await ref.read(photoPickerProvider).pick(source);
+    if (paths.isEmpty || !mounted) return;
+
+    final import = ref.read(photoImporterProvider);
+    setState(() => _importing += paths.length);
+    for (final path in paths) {
+      try {
+        final name = await import(path);
+        _sessionFiles.add(name);
+        if (!mounted) return;
+        setState(() => _attachments.add(AttachmentDraft(fileName: name)));
+      } finally {
+        if (mounted) setState(() => _importing--);
+      }
+    }
+  }
+
+  Future<void> _editPhoto(int index) async {
+    final photo = _attachments[index];
+    final result = await showPhotoSheet(context, photo);
+    if (result == null || !mounted) return;
+
+    switch (result) {
+      case PhotoSheetOpen():
+        await openPhotoViewer(context, _viewerPhotos, initialIndex: index);
+      case PhotoSheetRemove():
+        setState(() => _attachments.removeAt(index));
+        // Unsaved photos are deleted right away; saved ones when the record
+        // is saved (the repository removes files of dropped attachments).
+        if (_sessionFiles.remove(photo.fileName)) {
+          await _storage.delete(photo.fileName);
+        }
+      case PhotoSheetUpdate(:final docType, :final caption):
+        setState(
+          () => _attachments[index] = AttachmentDraft(
+            id: photo.id,
+            fileName: photo.fileName,
+            docType: docType,
+            caption: caption,
+          ),
+        );
+    }
+  }
+
+  List<ViewerPhoto> get _viewerPhotos => [
+    for (final a in _attachments)
+      ViewerPhoto(fileName: a.fileName, docType: a.docType, caption: a.caption),
+  ];
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
@@ -213,6 +282,7 @@ class _RecordFormScreenState extends ConsumerState<RecordFormScreen> {
           ),
         );
 
+    _saved = true;
     if (mounted) context.pop();
   }
 
@@ -236,7 +306,10 @@ class _RecordFormScreenState extends ConsumerState<RecordFormScreen> {
         title: Text(_isNew ? 'New record' : 'Edit record'),
         actions: [
           TextButton(
-            onPressed: _loading || _saving || _vehicleId == null ? null : _save,
+            onPressed:
+                _loading || _saving || _importing > 0 || _vehicleId == null
+                ? null
+                : _save,
             child: const Text('Save'),
           ),
         ],
@@ -339,6 +412,8 @@ class _RecordFormScreenState extends ConsumerState<RecordFormScreen> {
         if (_hasItems) ...[const SizedBox(height: 24), ..._itemsSection()],
         if (!_isFuel) ..._tasksSection(textTheme),
         const SizedBox(height: 24),
+        ..._photosSection(textTheme),
+        const SizedBox(height: 24),
         TextFormField(
           controller: _note,
           textCapitalization: TextCapitalization.sentences,
@@ -348,6 +423,59 @@ class _RecordFormScreenState extends ConsumerState<RecordFormScreen> {
         ),
       ],
     );
+  }
+
+  List<Widget> _photosSection(TextTheme textTheme) {
+    final scheme = Theme.of(context).colorScheme;
+    const size = 88.0;
+    return [
+      Text('Receipts & photos', style: textTheme.titleMedium),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final (i, a) in _attachments.indexed)
+            AttachmentThumb(
+              fileName: a.fileName,
+              docType: a.docType,
+              size: size,
+              onTap: () => _editPhoto(i),
+            ),
+          for (var i = 0; i < _importing; i++)
+            SizedBox.square(
+              dimension: size,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+            ),
+          SizedBox.square(
+            dimension: size,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: _addPhotos,
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add_a_photo_outlined),
+                  SizedBox(height: 4),
+                  Text('Add photo', style: TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ];
   }
 
   List<Widget> _fuelFields() => [

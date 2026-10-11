@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../core/format.dart';
 import '../../data/db/database.dart';
 import '../../providers.dart';
+import '../../services/photo_picker.dart';
 import '../../widgets/vehicle_avatar.dart';
 
 class VehicleFormScreen extends ConsumerStatefulWidget {
@@ -116,13 +116,10 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
     }
     if (choice == null) return;
 
-    final file = await ImagePicker().pickImage(
-      source: choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
-      // A small preview is enough for the vehicle photo.
-      maxWidth: 1280,
-      imageQuality: 85,
-    );
-    if (file != null) setState(() => _pickedPhotoPath = file.path);
+    final paths = await ref
+        .read(photoPickerProvider)
+        .pick(choice == 'camera' ? PhotoSource.camera : PhotoSource.gallery);
+    if (paths.isNotEmpty) setState(() => _pickedPhotoPath = paths.first);
   }
 
   Future<void> _save() async {
@@ -135,7 +132,7 @@ class _VehicleFormScreenState extends ConsumerState<VehicleFormScreen> {
 
     String? photo = _photoRemoved ? null : oldPhoto;
     if (_pickedPhotoPath != null) {
-      photo = await storage.importFile(_pickedPhotoPath!);
+      photo = await ref.read(photoImporterProvider)(_pickedPhotoPath!);
     }
 
     final odometer = parseInt(_odometer.text)!;
