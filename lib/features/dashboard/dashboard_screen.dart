@@ -5,12 +5,15 @@ import 'package:go_router/go_router.dart';
 import '../../core/format.dart';
 import '../../core/router.dart';
 import '../../data/db/database.dart';
+import '../../domain/task_schedule.dart';
 import '../../providers.dart';
 import '../../widgets/placeholder_view.dart';
 import '../../widgets/vehicle_avatar.dart';
 import '../garage/odometer_dialog.dart';
 import '../garage/vehicle_text.dart';
 import '../history/record_tile.dart';
+import '../plan/task_tile.dart';
+import '../plan/templates_sheet.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -57,6 +60,8 @@ class DashboardScreen extends ConsumerWidget {
                   _VehicleCard(vehicle: vehicle),
                   const SizedBox(height: 16),
                   const _QuickActions(),
+                  const SizedBox(height: 24),
+                  _Maintenance(vehicle: vehicle),
                   const SizedBox(height: 24),
                   _RecentRecords(vehicleId: vehicle.id),
                 ],
@@ -238,6 +243,78 @@ class _RecentRecords extends ConsumerWidget {
             children: [for (final r in records) RecordTile(record: r)],
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Tasks that need attention; when all is fine, the next upcoming ones.
+class _Maintenance extends ConsumerWidget {
+  const _Maintenance({required this.vehicle});
+
+  final Vehicle vehicle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final views = ref.watch(taskViewsProvider(vehicle.id)).value;
+    if (views == null) return const SizedBox.shrink();
+
+    final urgent = views
+        .where(
+          (v) => v.urgency == Urgency.overdue || v.urgency == Urgency.dueSoon,
+        )
+        .toList();
+    final shown = urgent.isNotEmpty
+        ? urgent
+        : views.where((v) => v.urgency == Urgency.ok).take(2).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text('Maintenance', style: theme.textTheme.titleMedium),
+            ),
+            if (views.isNotEmpty)
+              TextButton(
+                onPressed: () => context.go(Routes.plan),
+                child: const Text('See plan'),
+              ),
+          ],
+        ),
+        if (views.isEmpty)
+          Card.outlined(
+            child: ListTile(
+              leading: const Icon(Icons.playlist_add),
+              title: const Text('Set up a maintenance plan'),
+              subtitle: const Text(
+                'Get reminded about oil, filters, insurance…',
+              ),
+              onTap: () => showTemplatesSheet(context, vehicle),
+            ),
+          )
+        else ...[
+          if (urgent.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: Urgency.ok.color(theme.colorScheme),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('All good. Coming up next:'),
+                ],
+              ),
+            ),
+          for (final v in shown) ...[
+            TaskTile(view: v, compact: true),
+            const SizedBox(height: 8),
+          ],
+        ],
       ],
     );
   }

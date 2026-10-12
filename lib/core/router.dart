@@ -9,6 +9,7 @@ import '../features/garage/garage_screen.dart';
 import '../features/garage/vehicle_form_screen.dart';
 import '../features/history/history_screen.dart';
 import '../features/plan/plan_screen.dart';
+import '../features/plan/task_form_screen.dart';
 import '../features/record_details/record_details_screen.dart';
 import '../features/record_form/record_form_screen.dart';
 import '../features/shell/main_shell.dart';
@@ -29,6 +30,9 @@ abstract final class Routes {
   static const newRecord = '/record/new';
   static String record(int id) => '/record/$id';
   static String editRecord(int id) => '/record/$id/edit';
+
+  static const newTask = '/task/new';
+  static String editTask(int id) => '/task/$id/edit';
 
   static const data = '/data';
 }
@@ -71,8 +75,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.newRecord,
         parentNavigatorKey: rootKey,
-        builder: (context, state) =>
-            RecordFormScreen(initialType: state.uri.queryParameters['type']),
+        builder: (context, state) => RecordFormScreen(
+          initialType: state.uri.queryParameters['type'],
+          initialTaskId: int.tryParse(state.uri.queryParameters['task'] ?? ''),
+        ),
       ),
       GoRoute(
         path: '/record/:id',
@@ -84,6 +90,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => RecordFormScreen(recordId: _id(state)),
           ),
         ],
+      ),
+      GoRoute(
+        path: Routes.newTask,
+        parentNavigatorKey: rootKey,
+        builder: (context, state) => const TaskFormScreen(),
+      ),
+      GoRoute(
+        path: '/task/:id/edit',
+        parentNavigatorKey: rootKey,
+        builder: (context, state) => TaskFormScreen(taskId: _id(state)),
       ),
       GoRoute(
         path: Routes.data,

@@ -103,3 +103,42 @@ DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 // Calendar days; rounding absorbs DST hour shifts.
 int _daysBetween(DateTime from, DateTime to) =>
     (to.difference(from).inHours / 24).round();
+
+/// Average mileage per day from odometer readings `(date, km)`.
+///
+/// Uses the readings of the last [window] when they span at least two weeks,
+/// otherwise the whole history. Returns `null` when there is not enough data
+/// (less than a week between readings, or no mileage growth).
+double? averageDailyKm(
+  List<(DateTime, int)> readings, {
+  Duration window = const Duration(days: 180),
+}) {
+  if (readings.length < 2) return null;
+  final sorted = [...readings]..sort((a, b) => a.$1.compareTo(b.$1));
+  final last = sorted.last;
+
+  var first = sorted.first;
+  final recent = sorted.where((r) => !r.$1.isBefore(last.$1.subtract(window)));
+  if (recent.length >= 2 &&
+      last.$1.difference(recent.first.$1) >= const Duration(days: 14)) {
+    first = recent.first;
+  }
+
+  final days = last.$1.difference(first.$1).inHours / 24;
+  final km = last.$2 - first.$2;
+  if (days < 7 || km <= 0) return null;
+  return km / days;
+}
+
+/// Date when [kmLeft] will be driven at [dailyKm] per day.
+DateTime predictDate(int kmLeft, double dailyKm, DateTime now) =>
+    dateOnly(now).add(Duration(days: (kmLeft / dailyKm).round()));
+
+/// Intervals are entered in months but stored in days.
+int monthsToDays(int months) => (months * 365 / 12).round();
+
+/// `null` when [days] is not a whole number of months.
+int? daysToMonths(int days) {
+  final months = (days * 12 / 365).round();
+  return months > 0 && monthsToDays(months) == days ? months : null;
+}

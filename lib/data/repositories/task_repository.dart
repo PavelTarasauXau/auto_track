@@ -58,6 +58,16 @@ class TaskRepository {
             ..orderBy([(t) => OrderingTerm.desc(t.lastDoneDate)]))
           .watch();
 
+  /// Active tasks of all vehicles (garage badges).
+  Stream<List<MaintenanceTask>> watchAllActive() =>
+      (_db.select(_db.maintenanceTasks)..where((t) => t.isActive)).watch();
+
+  /// Brings a completed one-off task back to the plan (or hides one).
+  Future<void> setActive(int id, bool active) =>
+      (_db.update(_db.maintenanceTasks)..where((t) => t.id.equals(id))).write(
+        MaintenanceTasksCompanion(isActive: Value(active)),
+      );
+
   /// Active tasks of all vehicles (notification scheduling).
   Future<List<MaintenanceTask>> getAllActive() =>
       (_db.select(_db.maintenanceTasks)..where((t) => t.isActive)).get();

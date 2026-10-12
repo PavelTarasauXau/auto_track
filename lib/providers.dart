@@ -8,6 +8,7 @@ import 'data/repositories/record_repository.dart';
 import 'data/repositories/reminder_repository.dart';
 import 'data/repositories/task_repository.dart';
 import 'data/repositories/vehicle_repository.dart';
+import 'domain/task_view.dart';
 import 'services/file_storage.dart';
 import 'services/photo_picker.dart';
 
@@ -136,3 +137,37 @@ final recentRecordsProvider = StreamProvider.family<List<ServiceRecord>, int>(
 final activeTasksProvider = StreamProvider.family<List<MaintenanceTask>, int>(
   (ref, vehicleId) => ref.watch(taskRepositoryProvider).watchActive(vehicleId),
 );
+
+final completedTasksProvider =
+    StreamProvider.family<List<MaintenanceTask>, int>(
+      (ref, vehicleId) =>
+          ref.watch(taskRepositoryProvider).watchCompleted(vehicleId),
+    );
+
+final allActiveTasksProvider = StreamProvider<List<MaintenanceTask>>(
+  (ref) => ref.watch(taskRepositoryProvider).watchAllActive(),
+);
+
+/// Active tasks of a vehicle with their status, most urgent first.
+final taskViewsProvider = Provider.family<AsyncValue<List<TaskView>>, int>((
+  ref,
+  vehicleId,
+) {
+  final tasks = ref.watch(activeTasksProvider(vehicleId));
+  final vehicle = ref
+      .watch(vehiclesProvider)
+      .value
+      ?.where((v) => v.id == vehicleId)
+      .firstOrNull;
+  final logs = ref.watch(odometerLogProvider(vehicleId)).value ?? const [];
+  return tasks.whenData(
+    (list) => vehicle == null
+        ? const []
+        : buildTaskViews(
+            list,
+            currentOdo: vehicle.currentOdo,
+            logs: logs,
+            now: DateTime.now(),
+          ),
+  );
+});

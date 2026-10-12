@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../core/format.dart';
 import '../../core/router.dart';
 import '../../data/db/database.dart';
+import '../../domain/task_schedule.dart';
 import '../../providers.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/placeholder_view.dart';
 import '../../widgets/vehicle_avatar.dart';
+import '../plan/task_tile.dart';
 import 'vehicle_text.dart';
 
 class GarageScreen extends ConsumerWidget {
@@ -115,6 +117,7 @@ class _VehicleCard extends ConsumerWidget {
                       formatKm(vehicle.currentOdo),
                       style: theme.textTheme.labelLarge,
                     ),
+                    _TaskBadges(vehicleId: vehicle.id),
                   ],
                 ),
               ),
@@ -137,6 +140,50 @@ class _VehicleCard extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// "2 overdue · 1 due soon" for a vehicle; nothing when all is fine.
+class _TaskBadges extends ConsumerWidget {
+  const _TaskBadges({required this.vehicleId});
+
+  final int vehicleId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final views = ref.watch(taskViewsProvider(vehicleId)).value ?? [];
+    final scheme = Theme.of(context).colorScheme;
+    final counts = {
+      for (final u in [Urgency.overdue, Urgency.dueSoon])
+        u: views.where((v) => v.urgency == u).length,
+    }..removeWhere((_, n) => n == 0);
+    if (counts.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final MapEntry(key: urgency, value: n) in counts.entries)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: urgency.color(scheme).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '$n ${urgency.label.toLowerCase()}',
+                style: TextStyle(
+                  color: urgency.color(scheme),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

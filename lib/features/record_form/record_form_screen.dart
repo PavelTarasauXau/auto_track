@@ -17,13 +17,21 @@ import 'item_sheet.dart';
 import 'photo_sheet.dart';
 
 class RecordFormScreen extends ConsumerStatefulWidget {
-  const RecordFormScreen({super.key, this.recordId, this.initialType});
+  const RecordFormScreen({
+    super.key,
+    this.recordId,
+    this.initialType,
+    this.initialTaskId,
+  });
 
   /// `null` when creating a new record.
   final int? recordId;
 
   /// Preselected record type for a new record, e.g. `fuel`.
   final String? initialType;
+
+  /// Maintenance task to mark as completed by a new record ("Log service").
+  final int? initialTaskId;
 
   @override
   ConsumerState<RecordFormScreen> createState() => _RecordFormScreenState();
@@ -90,6 +98,13 @@ class _RecordFormScreenState extends ConsumerState<RecordFormScreen> {
       _vehicleId = vehicle?.id;
       if (vehicle != null) _odometer.text = '${vehicle.currentOdo}';
       _type = RecordType.values.asNameMap()[widget.initialType] ?? _type;
+      if (widget.initialTaskId case final taskId?) {
+        final task = await ref.read(taskRepositoryProvider).getById(taskId);
+        if (task != null) {
+          _completedTaskIds.add(task.id);
+          _title.text = task.title;
+        }
+      }
     } else {
       final details = await ref.read(recordRepositoryProvider).getDetails(id);
       if (details != null) _fill(details);
