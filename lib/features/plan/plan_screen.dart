@@ -7,6 +7,7 @@ import '../../core/router.dart';
 import '../../data/db/database.dart';
 import '../../providers.dart';
 import '../../widgets/placeholder_view.dart';
+import 'reminders_tab.dart';
 import 'task_tile.dart';
 import 'templates_sheet.dart';
 
@@ -46,11 +47,7 @@ class PlanScreen extends ConsumerWidget {
                     subtitle: 'Add a vehicle on the Home tab first',
                   )
                 : _MaintenanceTab(vehicle: vehicle),
-            const PlaceholderView(
-              icon: Icons.notifications_outlined,
-              title: 'Reminders',
-              subtitle: 'Notifications at a specific date and time',
-            ),
+            RemindersTab(vehicle: vehicle),
           ],
         ),
       ),

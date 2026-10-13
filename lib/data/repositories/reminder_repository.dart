@@ -25,6 +25,13 @@ class ReminderRepository {
   Future<List<Reminder>> getPending() =>
       (_db.select(_db.reminders)..where((r) => r.isDone.not())).get();
 
+  Stream<List<Reminder>> watchPending() =>
+      (_db.select(_db.reminders)..where((r) => r.isDone.not())).watch();
+
+  Future<Reminder?> getById(int id) => (_db.select(
+    _db.reminders,
+  )..where((r) => r.id.equals(id))).getSingleOrNull();
+
   Future<int> save({
     int? id,
     int? vehicleId,
