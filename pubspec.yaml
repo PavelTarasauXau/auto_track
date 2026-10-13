@@ -79,6 +79,11 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Noto Sans (SIL OFL, see assets/fonts/OFL.txt): Cyrillic-capable font
+  # for PDF reports; the built-in PDF fonts only cover Latin.
+  assets:
+    - assets/fonts/
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

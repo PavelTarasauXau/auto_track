@@ -1,4 +1,10 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/db/database.dart';
@@ -9,6 +15,7 @@ import 'data/repositories/reminder_repository.dart';
 import 'data/repositories/task_repository.dart';
 import 'data/repositories/vehicle_repository.dart';
 import 'domain/task_view.dart';
+import 'services/backup_service.dart';
 import 'services/file_storage.dart';
 import 'services/photo_picker.dart';
 
@@ -169,5 +176,60 @@ final taskViewsProvider = Provider.family<AsyncValue<List<TaskView>>, int>((
             logs: logs,
             now: DateTime.now(),
           ),
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Statistics
+
+final allRecordsProvider = StreamProvider.family<List<ServiceRecord>, int>(
+  (ref, vehicleId) => ref.watch(recordRepositoryProvider).watchAll(vehicleId),
+);
+
+final fuelRecordsProvider =
+    StreamProvider.family<List<(ServiceRecord, FuelDetail)>, int>(
+      (ref, vehicleId) =>
+          ref.watch(recordRepositoryProvider).watchFuelRecords(vehicleId),
+    );
+
+// ---------------------------------------------------------------------------
+// Export & backup (platform access behind providers so tests can fake it)
+
+/// Where exported files are written before sharing.
+final tempDirProvider = Provider<Future<Directory> Function()>(
+  (ref) => getTemporaryDirectory,
+);
+
+/// Opens the system share sheet for a file.
+final shareFileProvider =
+    Provider<Future<void> Function(String path, String subject)>(
+      (ref) => (path, subject) async {
+        await SharePlus.instance.share(
+          ShareParams(files: [XFile(path)], subject: subject),
+        );
+      },
+    );
+
+/// Lets the user pick a backup ZIP; `null` when cancelled.
+final pickBackupFileProvider = Provider<Future<String?> Function()>(
+  (ref) => () async {
+    final files = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['zip'],
+    );
+    return files.firstOrNull?.path;
+  },
+);
+
+final backupServiceProvider = Provider((ref) {
+  final storage = ref.watch(fileStorageProvider);
+  return BackupService(
+    db: ref.watch(databaseProvider),
+    // drift_flutter keeps the database next to the receipts folder, in the
+    // app documents directory.
+    databaseFile: File(
+      p.join(storage.directory.parent.path, '${AppDatabase.fileName}.sqlite'),
+    ),
+    receiptsDir: storage.directory,
   );
 });

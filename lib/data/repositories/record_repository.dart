@@ -56,26 +56,57 @@ class RecordRepository {
             ..orderBy([(r) => OrderingTerm.asc(r.date)]))
           .get();
 
-  /// Fuel records joined with their details, chronological.
-  Future<List<(ServiceRecord, FuelDetail)>> getFuelRecords(int vehicleId) {
-    final query =
-        _db.select(_db.serviceRecords).join([
-            innerJoin(
-              _db.fuelDetails,
-              _db.fuelDetails.recordId.equalsExp(_db.serviceRecords.id),
-            ),
-          ])
-          ..where(_db.serviceRecords.vehicleId.equals(vehicleId))
-          ..orderBy([OrderingTerm.asc(_db.serviceRecords.odometer)]);
-    return query
-        .map(
-          (row) => (
-            row.readTable(_db.serviceRecords),
-            row.readTable(_db.fuelDetails),
-          ),
-        )
-        .get();
+  /// Records since [from] (all when `null`) with related data, oldest
+  /// first (PDF and CSV export).
+  Future<List<RecordDetails>> getAllDetails(
+    int vehicleId, {
+    DateTime? from,
+  }) async {
+    final list = await getAll(vehicleId);
+    return [
+      for (final r in list)
+        if (from == null || !r.date.isBefore(from)) (await getDetails(r.id))!,
+    ];
   }
+
+  /// All records of a vehicle, updated on changes (statistics).
+  Stream<List<ServiceRecord>> watchAll(int vehicleId) =>
+      (_db.select(_db.serviceRecords)
+            ..where((r) => r.vehicleId.equals(vehicleId))
+            ..orderBy([(r) => OrderingTerm.asc(r.date)]))
+          .watch();
+
+  /// Fuel records with their details, updated on changes (statistics).
+  Stream<List<(ServiceRecord, FuelDetail)>> watchFuelRecords(int vehicleId) =>
+      _fuelQuery(vehicleId)
+          .map(
+            (row) => (
+              row.readTable(_db.serviceRecords),
+              row.readTable(_db.fuelDetails),
+            ),
+          )
+          .watch();
+
+  JoinedSelectStatement<HasResultSet, dynamic> _fuelQuery(int vehicleId) =>
+      _db.select(_db.serviceRecords).join([
+          innerJoin(
+            _db.fuelDetails,
+            _db.fuelDetails.recordId.equalsExp(_db.serviceRecords.id),
+          ),
+        ])
+        ..where(_db.serviceRecords.vehicleId.equals(vehicleId))
+        ..orderBy([OrderingTerm.asc(_db.serviceRecords.odometer)]);
+
+  /// Fuel records joined with their details, ordered by mileage.
+  Future<List<(ServiceRecord, FuelDetail)>> getFuelRecords(int vehicleId) =>
+      _fuelQuery(vehicleId)
+          .map(
+            (row) => (
+              row.readTable(_db.serviceRecords),
+              row.readTable(_db.fuelDetails),
+            ),
+          )
+          .get();
 
   Stream<RecordDetails?> watchDetails(int id) {
     // Re-run when any of the related tables change.
