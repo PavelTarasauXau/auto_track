@@ -144,4 +144,39 @@ void main() {
       expect(label(), 'No due date');
     });
   });
+
+  group('healthScore', () {
+    TaskView view(Urgency urgency, {double? progress}) => TaskView(
+      task: MaintenanceTask(
+        id: 1,
+        vehicleId: 1,
+        title: 'T',
+        remindBeforeKm: 500,
+        remindBeforeDays: 14,
+        isActive: true,
+        createdAt: now,
+      ),
+      status: TaskStatus(urgency: urgency, progress: progress),
+    );
+
+    test('average share of intervals left; overdue counts as zero', () {
+      expect(
+        healthScore([
+          view(Urgency.ok, progress: 0.2), // 80 % left
+          view(Urgency.dueSoon, progress: 0.9), // 10 % left
+          view(Urgency.overdue, progress: 1.3), // 0
+        ]),
+        30,
+      );
+    });
+
+    test('unknown tasks are ignored; no data gives null', () {
+      expect(
+        healthScore([view(Urgency.ok, progress: 0.5), view(Urgency.unknown)]),
+        50,
+      );
+      expect(healthScore([view(Urgency.unknown)]), isNull);
+      expect(healthScore(const []), isNull);
+    });
+  });
 }

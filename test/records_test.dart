@@ -49,6 +49,10 @@ void main() {
   });
 
   Future<void> pumpApp(WidgetTester tester) async {
+    // A typical phone screen (Redmi Note 8: 393×851 dp).
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
     final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
@@ -99,7 +103,12 @@ void main() {
 
     // Back on the dashboard: new odometer and the record in "Recent".
     expect(find.text('50,600 km'), findsOneWidget);
-    expect(find.text('Recent records'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Recent records'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('60.00'), findsOneWidget);
 
     final fuel = await db.select(db.fuelDetails).getSingle();

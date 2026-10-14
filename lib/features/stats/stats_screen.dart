@@ -5,11 +5,13 @@ import 'package:intl/intl.dart';
 
 import '../../core/enums.dart';
 import '../../core/format.dart';
+import '../../core/theme.dart';
 import '../../data/db/database.dart';
 import '../../domain/stats.dart';
 import '../../providers.dart';
 import '../../widgets/placeholder_view.dart';
 import '../../widgets/record_type_icon.dart';
+import '../../widgets/ui.dart';
 
 final statsPeriodProvider = NotifierProvider<StatsPeriodNotifier, StatsPeriod>(
   StatsPeriodNotifier.new,
@@ -136,21 +138,39 @@ class _MetricsGrid extends StatelessWidget {
     final price = fuel.avgPricePerLiter;
 
     final metrics = [
-      (Icons.payments_outlined, 'Total spent', formatMoney(cost.total)),
-      (Icons.route_outlined, 'Distance', km == null ? '—' : formatKm(km)),
-      (Icons.speed, 'Cost of 1 km', perKm == null ? '—' : formatMoney(perKm)),
+      (
+        Icons.payments_outlined,
+        AppColors.cyan,
+        'Total spent',
+        formatMoney(cost.total),
+      ),
+      (
+        Icons.route_outlined,
+        AppColors.violet,
+        'Distance',
+        km == null ? '—' : formatKm(km),
+      ),
+      (
+        Icons.speed,
+        AppColors.ok,
+        'Cost of 1 km',
+        perKm == null ? '—' : formatMoney(perKm),
+      ),
       (
         Icons.local_gas_station_outlined,
+        AppColors.soon,
         'Fuel consumption',
         consumption == null ? '—' : '${consumption.toStringAsFixed(1)} L/100km',
       ),
       (
         Icons.receipt_outlined,
+        const Color(0xFF2DD4BF),
         'Average refuel',
         fillUp == null ? '—' : formatMoney(fillUp),
       ),
       (
         Icons.water_drop_outlined,
+        const Color(0xFFA78BFA),
         'Fuel bought',
         fuel.fillUps == 0
             ? '—'
@@ -167,10 +187,15 @@ class _MetricsGrid extends StatelessWidget {
           spacing: spacing,
           runSpacing: spacing,
           children: [
-            for (final (icon, label, value) in metrics)
+            for (final (icon, color, label, value) in metrics)
               SizedBox(
                 width: width,
-                child: _Metric(icon: icon, label: label, value: value),
+                child: _Metric(
+                  icon: icon,
+                  color: color,
+                  label: label,
+                  value: value,
+                ),
               ),
           ],
         );
@@ -180,27 +205,36 @@ class _MetricsGrid extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({required this.icon, required this.label, required this.value});
+  const _Metric({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.value,
+  });
 
   final IconData icon;
+  final Color color;
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card.filled(
-      color: theme.colorScheme.surfaceContainerHighest,
+    return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 20, color: theme.colorScheme.primary),
-            const SizedBox(height: 8),
+            GlowIcon(icon, color: color, size: 36),
+            const SizedBox(height: 12),
             Text(
               value,
-              style: theme.textTheme.titleMedium,
+              style: const TextStyle(
+                fontFamily: displayFont,
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -224,13 +258,20 @@ class _ChartCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Card.outlined(
+      child: Card(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: theme.textTheme.titleMedium),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontFamily: displayFont,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                ),
+              ),
               if (subtitle != null)
                 Text(subtitle!, style: theme.textTheme.bodySmall),
               const SizedBox(height: 16),
@@ -255,22 +296,41 @@ class _CategoryPie extends StatelessWidget {
     return Row(
       children: [
         SizedBox(
-          width: 140,
-          height: 140,
-          child: PieChart(
-            PieChartData(
-              centerSpaceRadius: 36,
-              sectionsSpace: 2,
-              sections: [
-                for (final MapEntry(key: type, value: v) in byType.entries)
-                  PieChartSectionData(
-                    value: v,
-                    color: RecordTypeIcon.colorOf(type),
-                    radius: 30,
-                    showTitle: false,
+          width: 150,
+          height: 150,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PieChart(
+                PieChartData(
+                  centerSpaceRadius: 48,
+                  sectionsSpace: 3,
+                  sections: [
+                    for (final MapEntry(key: type, value: v) in byType.entries)
+                      PieChartSectionData(
+                        value: v,
+                        color: RecordTypeIcon.colorOf(type),
+                        radius: 22,
+                        showTitle: false,
+                      ),
+                  ],
+                ),
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    formatMoney(total),
+                    style: const TextStyle(
+                      fontFamily: displayFont,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
                   ),
-              ],
-            ),
+                  Text('total', style: theme.textTheme.bodySmall),
+                ],
+              ),
+            ],
           ),
         ),
         const SizedBox(width: 16),
@@ -344,9 +404,13 @@ class _MonthlyBars extends StatelessWidget {
                 barRods: [
                   BarChartRodData(
                     toY: m.value,
-                    color: scheme.primary,
+                    gradient: const LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [AppColors.violet, AppColors.cyan],
+                    ),
                     width: 14,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                 ],
               ),
@@ -395,12 +459,20 @@ class _CostPerKmLine extends StatelessWidget {
               ],
               isCurved: true,
               preventCurveOverShooting: true,
-              color: scheme.tertiary,
+              gradient: AppColors.accent,
               barWidth: 3,
+              isStrokeCapRound: true,
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                color: scheme.tertiary.withValues(alpha: 0.12),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.cyan.withValues(alpha: 0.25),
+                    AppColors.cyan.withValues(alpha: 0),
+                  ],
+                ),
               ),
             ),
           ],

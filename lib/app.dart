@@ -15,8 +15,9 @@ class AutoTrackApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'AutoTrack',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      // The "car dashboard" design is dark by intent.
+      theme: AppTheme.dark,
+      themeMode: ThemeMode.dark,
       routerConfig: ref.watch(routerProvider),
     );
   }

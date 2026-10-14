@@ -119,3 +119,21 @@ String daysLabel(int days) {
   }
   return months == 1 ? '1 month' : '$months months';
 }
+
+/// Overall maintenance condition of a vehicle, 0..100 (%): how much of
+/// each task's interval is still left, averaged; overdue tasks count as 0.
+/// `null` when no task has a status yet.
+int? healthScore(List<TaskView> views) {
+  final scores = [
+    for (final v in views)
+      if (v.urgency != Urgency.unknown)
+        v.urgency == Urgency.overdue
+            ? 0.0
+            : (1 -
+                      (v.status.progress ??
+                          (v.urgency == Urgency.dueSoon ? 0.9 : 0.5)))
+                  .clamp(0.0, 1.0),
+  ];
+  if (scores.isEmpty) return null;
+  return (scores.reduce((a, b) => a + b) / scores.length * 100).round();
+}

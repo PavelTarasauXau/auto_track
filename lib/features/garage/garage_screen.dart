@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/format.dart';
 import '../../core/router.dart';
+import '../../core/theme.dart';
 import '../../data/db/database.dart';
 import '../../domain/task_schedule.dart';
 import '../../providers.dart';
@@ -82,10 +83,15 @@ class _VehicleCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    return Card.filled(
-      color: isCurrent
-          ? scheme.secondaryContainer
-          : scheme.surfaceContainerHighest,
+    // The current vehicle glows with the accent color.
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(
+          color: isCurrent ? AppColors.cyan : AppColors.outline,
+          width: isCurrent ? 1.5 : 1,
+        ),
+      ),
       child: InkWell(
         onTap: () {
           ref.read(selectedVehicleIdProvider.notifier).select(vehicle.id);

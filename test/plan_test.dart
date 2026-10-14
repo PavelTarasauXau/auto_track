@@ -47,6 +47,10 @@ void main() {
   });
 
   Future<void> pumpApp(WidgetTester tester) async {
+    // A typical phone screen (Redmi Note 8: 393×851 dp).
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
     final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(

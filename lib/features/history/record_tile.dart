@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/format.dart';
 import '../../core/router.dart';
+import '../../core/theme.dart';
 import '../../data/db/database.dart';
 import '../../widgets/record_type_icon.dart';
 
@@ -14,7 +15,6 @@ class RecordTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final subtitle = [
       formatDate(record.date),
       formatKm(record.odometer),
@@ -27,7 +27,15 @@ class RecordTile extends StatelessWidget {
       subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: record.cost == null
           ? null
-          : Text(formatMoney(record.cost!), style: theme.textTheme.titleSmall),
+          : Text(
+              formatMoney(record.cost!),
+              style: const TextStyle(
+                fontFamily: displayFont,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: AppColors.text,
+              ),
+            ),
       onTap: () => context.push(Routes.record(record.id)),
     );
   }

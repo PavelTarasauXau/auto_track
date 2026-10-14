@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme.dart';
+
 /// Temporary body for screens that are not implemented yet.
 class PlaceholderView extends StatelessWidget {
   const PlaceholderView({
@@ -24,9 +26,36 @@ class PlaceholderView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: theme.colorScheme.outline),
-            const SizedBox(height: 16),
-            Text(title, style: theme.textTheme.titleMedium),
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.cyan.withValues(alpha: 0.18),
+                    AppColors.violet.withValues(alpha: 0.18),
+                  ],
+                ),
+                border: Border.all(
+                  color: AppColors.cyan.withValues(alpha: 0.3),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.cyan.withValues(alpha: 0.2),
+                    blurRadius: 40,
+                    spreadRadius: -8,
+                  ),
+                ],
+              ),
+              child: Icon(icon, size: 42, color: AppColors.cyan),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge,
+            ),
             if (subtitle != null) ...[
               const SizedBox(height: 8),
               Text(

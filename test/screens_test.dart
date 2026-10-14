@@ -81,6 +81,10 @@ void main() {
   });
 
   Future<void> pumpApp(WidgetTester tester) async {
+    // A typical phone screen (Redmi Note 8: 393×851 dp).
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
     final prefs = await SharedPreferences.getInstance();
     var imported = 0;
     await tester.pumpWidget(
@@ -168,12 +172,15 @@ void main() {
       expect(find.text('Oil change'), findsOneWidget);
       expect(find.text('OSAGO policy'), findsOneWidget);
 
-      // Filter by type.
-      await tester.tap(find.widgetWithText(FilterChip, 'Insurance'));
+      // Filter by type (the chip row scrolls horizontally).
+      final insurance = find.widgetWithText(FilterChip, 'Insurance');
+      await tester.ensureVisible(insurance);
+      await tester.pumpAndSettle();
+      await tester.tap(insurance);
       await tester.pumpAndSettle();
       expect(find.text('Oil change'), findsNothing);
       expect(find.text('OSAGO policy'), findsOneWidget);
-      await tester.tap(find.widgetWithText(FilterChip, 'Insurance'));
+      await tester.tap(insurance);
       await tester.pumpAndSettle();
 
       // Search finds the receipt through its record.
@@ -216,7 +223,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Total spent'), findsOneWidget);
-    expect(find.text('180.00'), findsOneWidget);
+    expect(find.text('180.00'), findsWidgets); // metric and donut center
     expect(find.text('Spending by category'), findsOneWidget);
     expect(find.text('40 L · 1.50/L'), findsOneWidget);
   });

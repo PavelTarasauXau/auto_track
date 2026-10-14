@@ -79,10 +79,20 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # Noto Sans (SIL OFL, see assets/fonts/OFL.txt): Cyrillic-capable font
-  # for PDF reports; the built-in PDF fonts only cover Latin.
+  # Noto Sans (SIL OFL, assets/fonts/OFL-NotoSans.txt): Cyrillic-capable
+  # font for PDF reports; the built-in PDF fonts only cover Latin.
   assets:
     - assets/fonts/
+
+  # Space Grotesk (SIL OFL, assets/fonts/OFL-SpaceGrotesk.txt): display font
+  # for numbers and headings ("dashboard" look).
+  fonts:
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-500.ttf
+          weight: 500
+        - asset: assets/fonts/SpaceGrotesk-700.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:
